@@ -20,9 +20,9 @@ type Conf struct {
 }
 
 type UserStore interface {
-	GetUserById(user_id bson.M, user *User)
+	GetUserById(user_id int64, user *User)
 	GetAllUsers()([]User, error)
-	GetUserByName(name bson.M, user *User)
+	GetUserByName(name string, user *User)
 	Update(sel, update bson.M) error
 	Insert(user User) error
 	Close() error
@@ -62,12 +62,12 @@ func InitUserStore(conf Conf) (UserStore, error){
 	return uStore, nil
 }
 
-func (mStore *MongoUserStore) GetUserById(user_id bson.M, user *User) {
+func (mStore *MongoUserStore) GetUserById(user_id int64, user *User) {
 	mStore.usersData.Find(user_id).One(user)
 	return // why?
 }
 
-func (mStore *MongoUserStore) GetUserByName(name bson.M, user *User) {
+func (mStore *MongoUserStore) GetUserByName(name string, user *User) {
 	mStore.usersData.Find(name).One(user)
 	return // why?
 }
