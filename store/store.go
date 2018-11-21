@@ -4,6 +4,8 @@ import (
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"time"
+	"strconv"
 )
 
 const (
@@ -22,8 +24,9 @@ type Conf struct {
 type UserStore interface {
 	GetUserById(user_id int64, user *User)
 	GetAllUsers()([]User, error)
+	GetUsersToFollow()([]User, error)
 	GetUserByName(name string, user *User)
-	Update(sel, update bson.M) error
+	Update(user User) error
 	Insert(user User) error
 	Close() error
 }
@@ -74,7 +77,11 @@ func (mStore *MongoUserStore) GetUserByName(name string, user *User) {
 	return // why?
 }
 
-func (mStore *MongoUserStore) Update(sel, update bson.M) error {
+func (mStore *MongoUserStore) Update(user User) error {
+	sel := bson.M{"user_id":user.UserID}
+	//update := bson.M{"$set": bson.M{"wallets.status": WalletStatusDeleted,},}
+	update := bson.M{"$set": bson.M{"last_action_time": user.LastActionTime, "status": user.Status},}
+
 	return mStore.usersData.Update(sel, update)
 }
 
@@ -82,6 +89,27 @@ func (mStore *MongoUserStore) GetAllUsers()([]User, error) {
 	allUsers := []User{}
 	err:= mStore.usersData.Find(nil).All(&allUsers)
 	return allUsers, err
+}
+
+func (mStore *MongoUserStore) GetUsersToFollow()([]User, error){
+	users := []User{}
+	query := bson.M{"status": 0}
+	err := mStore.usersData.Find(query).All(&users)
+	return users, err
+}
+
+func (mStore *MongoUserStore) GetUsersToUnFollow()([]User, error){
+	users := []User{}
+	var dateToUnffolow int64
+
+	//dateToUnffolow = time.Now().Unix() - int64(3*24*time.Hour)
+	dateToUnffolow = time.Now().Unix() - int64(1 * time.Minute)
+
+	query := bson.M{"status": 1, "last_action_time":bson.M{ "$lt": dateToUnffolow}}
+	err := mStore.usersData.Find(query).All(&users)
+
+
+	return users, err
 }
 
 func (mStore *MongoUserStore) Insert(user User) error {
