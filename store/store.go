@@ -63,12 +63,14 @@ func InitUserStore(conf Conf) (UserStore, error){
 }
 
 func (mStore *MongoUserStore) GetUserById(user_id int64, user *User) {
-	mStore.usersData.Find(user_id).One(user)
+	query := bson.M{"user_id": user_id}
+	mStore.usersData.Find(query).One(user)
 	return // why?
 }
 
 func (mStore *MongoUserStore) GetUserByName(name string, user *User) {
-	mStore.usersData.Find(name).One(user)
+	query := bson.M{"user_name": name}
+	mStore.usersData.Find(query).One(user)
 	return // why?
 }
 
