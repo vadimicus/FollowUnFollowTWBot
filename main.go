@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"encoding/json"
+	"github.com/vadimicus/FollowUnFollowTWBot/store"
+	//"github.com/gin-gonic/gin"
 )
 
 type Creds struct {
@@ -21,6 +23,26 @@ type ToFollowUser struct {
 	Weight int			`json:"weight"`
 
 }
+
+type Bot struct {
+	config     *Configuration
+	//route      *gin.Engine
+
+	userStore store.UserStore
+
+	//restClient     *client.RestClient
+
+
+}
+
+type Configuration struct {
+	Name              string
+	Database          store.Conf
+	//SocketioAddr      string
+	//RestAddress       string
+
+}
+
 
 func main() {
 
@@ -83,3 +105,27 @@ func main() {
 
 	}
 }
+
+//func Init(conf *Configuration) (*Multy, error) {
+func Init(conf *Configuration) (*Bot, error) {
+	bot := &Bot{
+		config: conf,
+	}
+	// DB initialization
+	userStore, err := store.InitUserStore(conf.Database)
+	if err != nil {
+		return nil, fmt.Errorf("DB initialization: %s on port %s", err.Error(), conf.Database.Address)
+	}
+	bot.userStore = userStore
+	fmt.Println("UserStore initialization done on %s √", conf.Database)
+
+
+	//users data set
+
+	//// REST handlers
+	//if err = multy.initHttpRoutes(conf); err != nil {
+	//	return nil, fmt.Errorf("Router initialization: %s", err.Error())
+	//}
+	return bot, nil
+}
+
