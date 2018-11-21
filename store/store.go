@@ -21,6 +21,7 @@ type Conf struct {
 
 type UserStore interface {
 	GetUserById(user_id bson.M, user *User)
+	GetAllUsers()([]User, error)
 	GetUserByName(name bson.M, user *User)
 	Update(sel, update bson.M) error
 	Insert(user User) error
@@ -75,6 +76,12 @@ func (mStore *MongoUserStore) Update(sel, update bson.M) error {
 	return mStore.usersData.Update(sel, update)
 }
 
+func (mStore *MongoUserStore) GetAllUsers()([]User, error) {
+	allUsers := []User{}
+	err:= mStore.usersData.Find(nil).All(&allUsers)
+	return allUsers, err
+}
+
 func (mStore *MongoUserStore) Insert(user User) error {
 	return mStore.usersData.Insert(user)
 }
@@ -91,7 +98,7 @@ func (mStore *MongoUserStore) Close() error {
 
 
 type User struct {
-	UserID  string   `bson:"user_id"`  // User uqnique identifier
+	UserID  int64   `bson:"user_id"`  // User uqnique identifier
 	Name    string   `bson:"user_name"`
 	Description string		`bson:"description"`
 	Weight		int			`bson:"weight"`

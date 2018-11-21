@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"github.com/vadimicus/FollowUnFollowTWBot/store"
-	//"github.com/gin-gonic/gin"
+	"time"
 )
 
 type Creds struct {
@@ -69,6 +69,18 @@ func main() {
 		fmt.Println("Not correct arguments for launch")
 	} else {
 
+		bot, error := Init(&globalOpt)
+		if error != nil{
+			fmt.Println("Init Error:", error)
+		}
+
+		//fmt.Println("Got Bot:", bot)
+
+
+
+
+
+
 		var sourceFilePath string
 		var credsFilePath string
 
@@ -110,15 +122,24 @@ func main() {
 
 		if len(targetFollowers) > 0{
 			//TODO check and fill database
+
+			//Test fill database
+
+			for _, followerRaw := range targetFollowers{
+
+
+				user := store.User{Name:followerRaw.Name,UserID:followerRaw.UserId,Description:followerRaw.Description,Weight:followerRaw.Weight,Status:0,LastActionTime:time.Now().Unix() }
+
+
+				bot.userStore.Insert(user)
+			}
+
+
 		}
 
-	}
-	bot, error := Init(&globalOpt)
-	if error != nil{
-		fmt.Println("Init Error:", error)
-	}
+		inDB := store.UserStore().
 
-	fmt.Println("Got Bot:", bot)
+	}
 
 }
 
