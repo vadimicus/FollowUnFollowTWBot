@@ -137,7 +137,10 @@ func main() {
 
 		}
 
-		inDB := store.UserStore().
+		inDB,err := bot.userStore.GetAllUsers()
+
+		fmt.Println("Goted users from DB LEN:", len(inDB))
+		fmt.Println("Goted users from DB ERR:", err)
 
 	}
 
