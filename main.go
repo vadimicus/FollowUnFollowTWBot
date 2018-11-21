@@ -58,6 +58,12 @@ func main() {
 	var creds Creds
 	targetFollowers := make([]ToFollowUser,0)
 
+	bot, error := Init(&globalOpt)
+	if error != nil{
+		fmt.Println("Init Error:", error)
+	}
+
+	fmt.Println("Got Bot:", bot)
 	args := os.Args
 
 	// target people file path -t
@@ -68,18 +74,6 @@ func main() {
 	if argsLen <=2 {
 		fmt.Println("Not correct arguments for launch")
 	} else {
-
-		bot, error := Init(&globalOpt)
-		if error != nil{
-			fmt.Println("Init Error:", error)
-		}
-
-		//fmt.Println("Got Bot:", bot)
-
-
-
-
-
 
 		var sourceFilePath string
 		var credsFilePath string
@@ -127,11 +121,16 @@ func main() {
 
 			for _, followerRaw := range targetFollowers{
 
+				var user store.User
 
-				user := store.User{Name:followerRaw.Name,UserID:followerRaw.UserId,Description:followerRaw.Description,Weight:followerRaw.Weight,Status:0,LastActionTime:time.Now().Unix() }
+				bot.userStore.GetUserById(followerRaw.UserId, &user)
 
+				if user.UserID != followerRaw.UserId{
+					user = store.User{Name:followerRaw.Name,UserID:followerRaw.UserId,Description:followerRaw.Description,Weight:followerRaw.Weight,Status:0,LastActionTime:time.Now().Unix() }
 
-				bot.userStore.Insert(user)
+					bot.userStore.Insert(user)
+				}
+
 			}
 
 
