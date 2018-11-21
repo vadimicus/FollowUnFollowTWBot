@@ -43,6 +43,15 @@ type Configuration struct {
 
 }
 
+var (
+	globalOpt = Configuration{
+		Name:"FollowBot",
+		Database: store.Conf{
+			Address:"localhost:27017",
+		},
+	}
+)
+
 
 func main() {
 
@@ -104,6 +113,13 @@ func main() {
 		}
 
 	}
+	bot, error := Init(&globalOpt)
+	if error != nil{
+		fmt.Println("Init Error:", error)
+	}
+
+	fmt.Println("Got Bot:", bot)
+
 }
 
 //func Init(conf *Configuration) (*Multy, error) {
