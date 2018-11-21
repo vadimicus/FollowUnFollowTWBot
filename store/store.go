@@ -24,6 +24,7 @@ type UserStore interface {
 	GetUserById(user_id int64, user *User)
 	GetAllUsers()([]User, error)
 	GetUsersToFollow()([]User, error)
+	GetUsersToUnFollow()([]User, error)
 	GetUserByName(name string, user *User)
 	Update(user User) error
 	Insert(user User) error
