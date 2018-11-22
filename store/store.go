@@ -43,7 +43,7 @@ type MongoUserStore struct {
 func InitUserStore(conf Conf) (UserStore, error){
 	uStore := &MongoUserStore{config: &conf,}
 
-	addr := []string{"localhost:27017"}
+	addr := []string{"localhost:20002"}
 
 	mongoDBDial := &mgo.DialInfo{
 		Addrs:    addr,
