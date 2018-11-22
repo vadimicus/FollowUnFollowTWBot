@@ -102,7 +102,7 @@ func (mStore *MongoUserStore) GetUsersToUnFollow()([]User, error){
 	users := []User{}
 	var dateToUnffolow int64
 
-	dateToUnffolow = time.Now().Unix() - int64(60) //this value is in seconds
+	dateToUnffolow = time.Now().Unix() - int64(172800) //this value is in seconds seted as 2 days
 
 	query := bson.M{"status": 1, "last_action_time":bson.M{ "$lt": dateToUnffolow}}
 	err := mStore.usersData.Find(query).All(&users)
