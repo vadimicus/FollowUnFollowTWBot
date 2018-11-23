@@ -23,6 +23,7 @@ type Conf struct {
 type UserStore interface {
 	GetUserById(user_id int64, user *User)
 	GetAllUsers()([]User, error)
+	GetUsersByStatus(status int)([]User, error)
 	GetUsersToFollow()([]User, error)
 	GetUsersToUnFollow()([]User, error)
 	GetUserByName(name string, user *User)
@@ -89,6 +90,14 @@ func (mStore *MongoUserStore) GetAllUsers()([]User, error) {
 	allUsers := []User{}
 	err:= mStore.usersData.Find(nil).All(&allUsers)
 	return allUsers, err
+}
+
+
+func (mStore *MongoUserStore) GetUsersByStatus(status int)([]User, error){
+	users := []User{}
+	query := bson.M{"status": status}
+	err := mStore.usersData.Find(query).All(&users)
+	return users, err
 }
 
 func (mStore *MongoUserStore) GetUsersToFollow()([]User, error){
