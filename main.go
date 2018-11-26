@@ -58,12 +58,14 @@ var (
 
 const (
 	waitTime = 87 // in seconds to respect twitter API limits 1000 follow calls per 24 hours
-	frame = 200
+	frame = 300
 )
 
 
 func main() {
 
+
+	time.Sleep(time.Second * 18)
 	//Bot initialization
 	bot, error := Init(&globalOpt)
 	if error != nil{
@@ -124,25 +126,34 @@ func StartFollowUnFollow(twClient *twitter.Client, bot *Bot)  {
 
 	fmt.Printf("Users stats:\n all users %d \n to follow %d \n to unfollow %d \n done: %d \n", allUsersCount, toFollowUsersCount, toUnFollowUsersCount, len(usersDone))
 
+	var actionsHistory = []int {1,1,1} //just default values
 	//var followers int
 	//time.Sleep(10 * time.Second)
 	for running {
 
 		//if it will be bad use it
-		//pending, _ := bot.userStore.GetUsersByStatus(1)
+		pendingUsers, _ := bot.userStore.GetUsersByStatus(1)
 
 		//This need to update cause it depends on the time
 		usersToUnFollow,_ = bot.userStore.GetUsersToUnFollow()
 
 		//action := ChoseAction(len(usersToFollow), len(usersToUnFollow), followers, len(pending) )
-		action := ChoseAction(len(usersToFollow), len(usersToUnFollow))
-		fmt.Printf("\n Status\n to follow: %d \n to unfollow: %d \n action: %d", len(usersToFollow), len(usersToUnFollow), action)
+		action := ChoseAction(len(usersToFollow), len(usersToUnFollow), len(pendingUsers), actionsHistory)
+		actionsHistory = append(actionsHistory, action)
+		actionsHistory = actionsHistory[1:]
+
+		fmt.Printf("\n Status\n to follow: %d \n to unfollow: %d \n action: %d \n action history %v", len(usersToFollow), len(usersToUnFollow), action, actionsHistory)
 		if action == 1 {
 
 			toFollowUser := usersToFollow[0]
 
 			if Follow(&toFollowUser, twClient){
 				toFollowUser.Status = 1
+				toFollowUser.LastActionTime = time.Now().Unix()
+				bot.userStore.Update(toFollowUser)
+			} else {
+				//Something went wrong
+				toFollowUser.Status = 66
 				toFollowUser.LastActionTime = time.Now().Unix()
 				bot.userStore.Update(toFollowUser)
 			}
@@ -158,12 +169,18 @@ func StartFollowUnFollow(twClient *twitter.Client, bot *Bot)  {
 				toUnfollow.Status = 2
 				toUnfollow.LastActionTime = time.Now().Unix()
 				bot.userStore.Update(toUnfollow)
+			} else {
+				//something went wrong
+				//mark this user with error status
+				toUnfollow.Status = 666
+				toUnfollow.LastActionTime = time.Now().Unix()
+				bot.userStore.Update(toUnfollow)
 			}
 			time.Sleep(waitTime * time.Second)
 			usersToUnFollow = usersToUnFollow[1:]
 		} else if action == 3 {
-			//TODO update user's followers count
-			//TODO implement wait time for 5 minutes
+			fmt.Println("There is too much users added. Went sleep for 3 minutes")
+			time.Sleep(3 *time.Minute)
 		} else{
 			running = false
 		}
@@ -176,7 +193,7 @@ func StartFollowUnFollow(twClient *twitter.Client, bot *Bot)  {
 }
 
 //func ChoseAction(toFCount int, toUnFCount int, followersCount int, pendingCount int) int {
-func ChoseAction(toFCount int, toUnFCount int) int {
+func ChoseAction(toFCount int, toUnFCount int, pendingCount int, actionHistory []int) int {
 	//This method should return 1 to implement follow, 2 to implement unfollow, 3 to wait human factor,  0 - work is done
 
 	//if followersCount!= 0 && pendingCount/followersCount >= 2{
@@ -203,14 +220,33 @@ func ChoseAction(toFCount int, toUnFCount int) int {
 	//}  else if toUnFCount > frame {
 	//	return 2
 	//}
+	var sum int
+	for _, action := range actionHistory{
+		sum+=action
+	}
+	//
+	//if pendingCount >= frame{
+	//	//TO MUCH ADDED USERS
+	//}
 
+		//this first call of the function and there is no history
 	if toUnFCount == 0{
-		if toFCount > 0{
+		if toFCount > 0 && pendingCount < frame{
 			return 1
 		} else {
-			return 0
+			if toFCount == 0 && pendingCount == 0{
+				return 0
+			}
+			return 3
 		}
 	} else {
+		if sum > 5{  //[2,1,1] //[1,2,1] [2,2,1] [2,2,2] [2,1,2] [1,1,2] [1,1,1]
+			if toFCount > 0 {
+				return 1
+			} else {
+				return 2
+			}
+		}
 		return 2
 	}
 
