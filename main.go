@@ -9,6 +9,8 @@ import (
 	"github.com/dghubble/go-twitter/twitter"
 	"time"
 	"github.com/dghubble/oauth1"
+	"strconv"
+
 )
 
 type Creds struct {
@@ -40,9 +42,14 @@ type Bot struct {
 type Configuration struct {
 	Name              string
 	Database          store.Conf
-	//SocketioAddr      string
+	DataBaseAddr      	string	`json:"dbAddr"`
 	//RestAddress       string
-
+	ConsumerKey			string	`json:"consKey"`
+	ConsumerSecret		string	`json:"consSec"`
+	Token				string	`json:"token"`
+	TokenSecret			string	`json:"tokenSec"`
+	OwnAccount			string	`json:"ownAccount"`
+	Frame				int64	`json:"frame"`
 }
 
 var (
@@ -53,24 +60,25 @@ var (
 		},
 	}
 
-	//bot Bot
+	frame = 350  //default value between diff of followers and friends
 )
 
 const (
 	waitTime = 87 // in seconds to respect twitter API limits 1000 follow calls per 24 hours
-	frame = 300
+
 )
 
 
 func main() {
 
-
-	time.Sleep(time.Second * 18)
 	//Bot initialization
-	bot, error := Init(&globalOpt)
-	if error != nil{
-		fmt.Println("Init Error:", error)
-	}
+
+	//bot, error := Init(&globalOpt)
+	//if error != nil{
+	//	fmt.Println("Init Error:", error)
+	//}
+
+	var bot *Bot
 
 	//Getting args
 	args := os.Args
@@ -84,15 +92,28 @@ func main() {
 		fmt.Println("Not correct arguments for launch")
 	} else {
 
-		var creds Creds
+		var conf Configuration
 		//Just getting args from the input launch
-		ParseArgs(args, &creds, bot)
+		ParseArgs(args, &conf)
+
+		//Bot initialization
+
+		bot, error := Init(&conf)
+		if error != nil{
+			fmt.Println("Init Error:", error)
+		}
+
+
+
+
 
 		//Just twitter client initialization
-		twClient := initTwitterClient(&creds)
+		twClient := initTwitterClient(&conf)
 
 		fmt.Println("Client Initialized Ok:", twClient)
 
+		//TODO make it work
+		//MakeLikes(twClient)
 		//Here we are ready to start normal work of the people
 		StartFollowUnFollow(twClient, bot)
 
@@ -127,8 +148,7 @@ func StartFollowUnFollow(twClient *twitter.Client, bot *Bot)  {
 	fmt.Printf("Users stats:\n all users %d \n to follow %d \n to unfollow %d \n done: %d \n", allUsersCount, toFollowUsersCount, toUnFollowUsersCount, len(usersDone))
 
 	var actionsHistory = []int {1,1,1} //just default values
-	//var followers int
-	//time.Sleep(10 * time.Second)
+
 	for running {
 
 		//if it will be bad use it
@@ -137,9 +157,10 @@ func StartFollowUnFollow(twClient *twitter.Client, bot *Bot)  {
 		//This need to update cause it depends on the time
 		usersToUnFollow,_ = bot.userStore.GetUsersToUnFollow()
 
-		//action := ChoseAction(len(usersToFollow), len(usersToUnFollow), followers, len(pending) )
+
 		action := ChoseAction(len(usersToFollow), len(usersToUnFollow), len(pendingUsers), actionsHistory)
 		actionsHistory = append(actionsHistory, action)
+		//we need to check only last 3 actions
 		actionsHistory = actionsHistory[1:]
 
 		fmt.Printf("\n Status\n to follow: %d \n to unfollow: %d \n action: %d \n action history %v", len(usersToFollow), len(usersToUnFollow), action, actionsHistory)
@@ -179,6 +200,8 @@ func StartFollowUnFollow(twClient *twitter.Client, bot *Bot)  {
 			time.Sleep(waitTime * time.Second)
 			usersToUnFollow = usersToUnFollow[1:]
 		} else if action == 3 {
+			//TODO go to make some likes
+
 			fmt.Println("There is too much users added. Went sleep for 3 minutes")
 			time.Sleep(3 *time.Minute)
 		} else{
@@ -192,42 +215,49 @@ func StartFollowUnFollow(twClient *twitter.Client, bot *Bot)  {
 
 }
 
+func MakeLikes(client *twitter.Client) bool {
+
+	//THIS IS GETTING LAST N tweets from ethereum and trying to like them
+	params := twitter.SearchTweetParams{Query:"ethereum", TweetMode:"extanded", Count:4}
+	search, resp, err := client.Search.Tweets(&params)
+
+
+
+
+	if resp.StatusCode != 200 {
+		return false
+	}
+
+
+	tweets:= search.Statuses
+	for _, tweet := range tweets{
+		fmt.Println("TW ID: ", tweet.ID)
+		fmt.Println("USER: ", tweet.User)
+		fmt.Println("FULL TEXT: ", tweet.FullText)
+		fmt.Println("FAVORITE COUNT: ", tweet.FavoriteCount)
+		fmt.Println("TEXT: ", tweet.Text)
+		fmt.Println("IS FAVORITE: ", tweet.Favorited)
+	}
+
+	fmt.Println("Search:", search)
+	//fmt.Println("Resp:", resp)
+	fmt.Println("Err:", err)
+
+
+	return false
+}
+
+
 //func ChoseAction(toFCount int, toUnFCount int, followersCount int, pendingCount int) int {
 func ChoseAction(toFCount int, toUnFCount int, pendingCount int, actionHistory []int) int {
 	//This method should return 1 to implement follow, 2 to implement unfollow, 3 to wait human factor,  0 - work is done
 
-	//if followersCount!= 0 && pendingCount/followersCount >= 2{
-	//	if toUnFCount == 0{
-	//		return 3
-	//	} else {
-	//		return 2
-	//	}
-	//}
 
-	//old logic
-	//if toUnFCount == 0{
-	//	if toFCount > 0{
-	//		return 1
-	//	} else {
-	//		return 0
-	//	}
-	//} else if toUnFCount <= frame{
-	//	if toFCount > 0 {
-	//		return 1
-	//	} else {
-	//		return 2
-	//	}
-	//}  else if toUnFCount > frame {
-	//	return 2
-	//}
 	var sum int
 	for _, action := range actionHistory{
 		sum+=action
 	}
-	//
-	//if pendingCount >= frame{
-	//	//TO MUCH ADDED USERS
-	//}
+
 
 		//this first call of the function and there is no history
 	if toUnFCount == 0{
@@ -306,7 +336,7 @@ func test(bot *Bot)  {
 	}
 }
 
-func initTwitterClient(creds *Creds) *twitter.Client{
+func initTwitterClient(creds *Configuration) *twitter.Client{
 	config := oauth1.NewConfig(creds.ConsumerKey, creds.ConsumerSecret)
 	token := oauth1.NewToken(creds.Token, creds.TokenSecret)
 	// http.Client will automatically authorize Requests
@@ -353,61 +383,69 @@ func Follow(user *store.User, client *twitter.Client) bool {
 	return true
 }
 
-func ParseArgs(args []string, creds *Creds, bot *Bot){
-	var sourceFilePath string
-	var credsFilePath string
+func ParseArgs(args []string, conf *Configuration){
+	//var sourceFilePath string
+	var confFilePath string
 
-	targetFollowers := make([]ToFollowUser,0)
+	//targetFollowers := make([]ToFollowUser,0)
 
 	for index, arg := range args{
-		if arg == "-t"{
-			sourceFilePath = args[index+1]
-		}
+		//if arg == "-t"{
+		//	sourceFilePath = args[index+1]
+		//}
 		if arg == "-c"{
-			credsFilePath = args[index+1]
+			confFilePath = args[index+1]
 		}
+		//if arg == "-f"{
+		//	frame, _ = strconv.Atoi(args[index+1])
+		//}
 	}
 
-	if len(credsFilePath) == 0{
+	if len(confFilePath) == 0{
 		fmt.Errorf("please use correct arguments -t for target people, -c for credentrials")
 		os.Exit(400)
 	}
 
-	if len(sourceFilePath) != 0{
-		// read the whole file at once
-		if len(sourceFilePath)>0{
-			sourceF, err := ioutil.ReadFile(sourceFilePath)
-			if err != nil {
-				panic(err)
-			}
-			json.Unmarshal(sourceF, &targetFollowers)
-		}
-
-		fmt.Println("Got JARR from file len:",len(targetFollowers))
-
-		if len(targetFollowers) > 0{
-			//Fill new users to database with exist check
-			for _, followerRaw := range targetFollowers{
-				var user store.User
-				bot.userStore.GetUserById(followerRaw.UserId, &user)
-				if user.UserID != followerRaw.UserId{
-					user = store.User{Name:followerRaw.Name,UserID:followerRaw.UserId,Description:followerRaw.Description,Weight:followerRaw.Weight,Status:0,LastActionTime:time.Now().Unix() }
-					bot.userStore.Insert(user)
-				}
-			}
-		}
-	}
+	//if len(sourceFilePath) != 0{
+	//	// read the whole file at once
+	//	if len(sourceFilePath)>0{
+	//		sourceF, err := ioutil.ReadFile(sourceFilePath)
+	//		if err != nil {
+	//			panic(err)
+	//		}
+	//		json.Unmarshal(sourceF, &targetFollowers)
+	//	}
+	//
+	//	fmt.Println("Got JARR from file len:",len(targetFollowers))
+	//
+	//	if len(targetFollowers) > 0{
+	//		//Fill new users to database with exist check
+	//		for _, followerRaw := range targetFollowers{
+	//			var user store.User
+	//			bot.userStore.GetUserById(followerRaw.UserId, &user)
+	//			if user.UserID != followerRaw.UserId{
+	//				user = store.User{Name:followerRaw.Name,UserID:followerRaw.UserId,Description:followerRaw.Description,Weight:followerRaw.Weight,Status:0,LastActionTime:time.Now().Unix() }
+	//				bot.userStore.Insert(user)
+	//			}
+	//		}
+	//	}
+	//}
 	// read the whole file at once
-	b, err := ioutil.ReadFile(credsFilePath)
+	b, err := ioutil.ReadFile(confFilePath)
 	if err != nil {
 		panic(err)
 	}
-	json.Unmarshal(b, &creds)
 
-	fmt.Println("Got JARR from file:",creds)
 
-	fmt.Println("SOurce FIle Path:", sourceFilePath)
-	fmt.Println("Creds FIle Path:", credsFilePath)
+	json.Unmarshal(b, &conf)
+
+	conf.Database.Address = conf.DataBaseAddr
+
+	fmt.Println("Got JARR from file:",conf)
+
+	fmt.Println("SOurce FIle Path:", confFilePath)
+	//fmt.Println("Creds FIle Path:", credsFilePath)
+	fmt.Println("Frame updated to:", conf.Frame)
 }
 
 //func Init(conf *Configuration) (*Multy, error) {
