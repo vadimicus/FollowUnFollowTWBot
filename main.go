@@ -6,10 +6,12 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"github.com/vadimicus/FollowUnFollowTWBot/store"
+	"github.com/vadimicus/FollowUnFollowTWBot/client"
 	"github.com/dghubble/go-twitter/twitter"
 	"time"
 	"github.com/dghubble/oauth1"
-	"strconv"
+
+	"github.com/gin-gonic/gin"
 
 )
 
@@ -30,11 +32,11 @@ type ToFollowUser struct {
 
 type Bot struct {
 	config     *Configuration
-	//route      *gin.Engine
+	route      *gin.Engine
 
 	userStore store.UserStore
 
-	//restClient     *client.RestClient
+	restClient     *client.RestClient
 
 
 }
@@ -43,7 +45,7 @@ type Configuration struct {
 	Name              string
 	Database          store.Conf
 	DataBaseAddr      	string	`json:"dbAddr"`
-	//RestAddress       string
+	RestAddress       	string	`json:"restAddr"`
 	ConsumerKey			string	`json:"consKey"`
 	ConsumerSecret		string	`json:"consSec"`
 	Token				string	`json:"token"`
@@ -78,7 +80,7 @@ func main() {
 	//	fmt.Println("Init Error:", error)
 	//}
 
-	var bot *Bot
+	//var bot *Bot
 
 	//Getting args
 	args := os.Args
@@ -104,13 +106,15 @@ func main() {
 		}
 
 
-
+		//fmt.Println("Got BOT!:", bot)
 
 
 		//Just twitter client initialization
 		twClient := initTwitterClient(&conf)
 
 		fmt.Println("Client Initialized Ok:", twClient)
+
+
 
 		//TODO make it work
 		//MakeLikes(twClient)
@@ -465,9 +469,67 @@ func Init(conf *Configuration) (*Bot, error) {
 	//users data set
 
 	//// REST handlers
-	//if err = multy.initHttpRoutes(conf); err != nil {
-	//	return nil, fmt.Errorf("Router initialization: %s", err.Error())
-	//}
+	if err = bot.initHttpRoutes(); err != nil {
+		return nil, fmt.Errorf("Router initialization: %s", err.Error())
+	}
+
+	go bot.route.Run(conf.RestAddress)
+
 	return bot, nil
 }
 
+func (bot *Bot) initHttpRoutes() error {
+//func (bot *Bot) initHttpRoutes(conf *Configuration) error {
+	router := gin.Default()
+	bot.route = router
+	gin.SetMode(gin.DebugMode)
+
+	//f, err := os.OpenFile("../currencies/erc20tokens.json", os.O_RDONLY, os.FileMode(0644))
+	//// f, err := os.OpenFile("/currencies/erc20tokens.json")
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//bs, err := ioutil.ReadAll(f)
+	//if err != nil {
+	//	return err
+	//}
+	//tokenList := store.VerifiedTokenList{}
+	//_ = json.Unmarshal(bs, &tokenList)
+
+	restClient, err := client.SetRestHandlers(
+		bot.userStore,
+		router,
+		//conf.DonationAddresses,
+		//multy.BTC,
+		//multy.ETH,
+		//conf.MultyVerison,
+		//conf.Secretkey,
+		//conf.MobileVersions,
+		//tokenList,
+		//conf.BrowserDefault,
+		//multy.ExchangerFactory,
+	)
+	if err != nil {
+		return err
+	}
+	bot.restClient = restClient
+
+	//// socketIO server initialization. server -> mobile client
+	//socketIORoute := router.Group("/socketio")
+	//socketIOPool, err := client.SetSocketIOHandlers(multy.restClient, multy.BTC, multy.ETH, socketIORoute, conf.SocketioAddr, conf.NSQAddress, multy.userStore)
+	//if err != nil {
+	//	return err
+	//}
+	//multy.clientPool = socketIOPool
+	//multy.ETH.WsServer = multy.clientPool.Server
+	//multy.BTC.WsServer = multy.clientPool.Server
+
+	//firebaseClient, err := client.InitFirebaseConn(&conf.Firebase, multy.route, conf.NSQAddress)
+	//if err != nil {
+	//	return err
+	//}
+	//multy.firebaseClient = firebaseClient
+
+	return nil
+}
