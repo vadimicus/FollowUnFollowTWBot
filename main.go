@@ -100,6 +100,11 @@ func main() {
 
 		//Bot initialization
 
+		fmt.Println("We should wait for Mongo Start 15 seconds")
+		time.Sleep(15 * time.Second)
+
+		fmt.Println("Trying initizlize Bot")
+
 		bot, error := Init(&conf)
 		if error != nil{
 			fmt.Println("Init Error:", error)
