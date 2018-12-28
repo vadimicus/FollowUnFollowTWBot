@@ -17,4 +17,5 @@ services:
           - ./config/conf:/conf
         ports:
           - 1202:1202
+#        entrypoint: "ping mongodb"
         entrypoint: "./main -c /conf"
