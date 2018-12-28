@@ -73,15 +73,6 @@ const (
 
 func main() {
 
-	//Bot initialization
-
-	//bot, error := Init(&globalOpt)
-	//if error != nil{
-	//	fmt.Println("Init Error:", error)
-	//}
-
-	//var bot *Bot
-
 	//Getting args
 	args := os.Args
 
@@ -100,8 +91,8 @@ func main() {
 
 		//Bot initialization
 
-		fmt.Println("We should wait for Mongo Start 15 seconds")
-		time.Sleep(15 * time.Second)
+		fmt.Println("We should wait for Mongo Start 5 seconds")
+		time.Sleep(5 * time.Second)
 
 		fmt.Println("Trying initizlize Bot")
 
@@ -122,16 +113,15 @@ func main() {
 
 
 		//TODO make it work
-		//MakeLikes(twClient)
 		//Here we are ready to start normal work of the people
-		StartFollowUnFollow(twClient, bot)
+		StartFollowUnFollow(twClient, bot, &conf)
 
 	}
 
 }
 
 
-func StartFollowUnFollow(twClient *twitter.Client, bot *Bot)  {
+func StartFollowUnFollow(twClient *twitter.Client, bot *Bot, conf *Configuration)  {
 
 	var running bool
 	running = true
@@ -209,10 +199,14 @@ func StartFollowUnFollow(twClient *twitter.Client, bot *Bot)  {
 			time.Sleep(waitTime * time.Second)
 			usersToUnFollow = usersToUnFollow[1:]
 		} else if action == 3 {
-			//TODO go to make some likes
+			if UpdateFrame(twClient, conf){
+				fmt.Println("There is too much users added. Trying to update Frame")
+				time.Sleep(waitTime * time.Second)
+			} else{
+				fmt.Println("Update Frame Error. Gone to sleep for 3 minutes")
+				time.Sleep(3 *time.Minute)
+			}
 
-			fmt.Println("There is too much users added. Went sleep for 3 minutes")
-			time.Sleep(3 *time.Minute)
 		} else{
 			running = false
 		}
@@ -221,6 +215,30 @@ func StartFollowUnFollow(twClient *twitter.Client, bot *Bot)  {
 	fmt.Printf("Work is done, enjoy it ;)")
 
 	fmt.Printf("Work is done, enjoy it ;)")
+
+}
+
+func UpdateFrame(twClient *twitter.Client, conf *Configuration) bool{
+
+
+	params := twitter.UserShowParams{ScreenName:conf.OwnAccount}
+	//
+	ownAcc, resp, error := twClient.Users.Show(&params)
+
+	if resp.StatusCode == 200{
+		friendsCount := float64(ownAcc.FollowersCount)
+
+		fmt.Println("OLD FRAME :", frame)
+
+		frame = int(friendsCount * 1.5)
+
+		fmt.Println("NEW FRAME :", frame)
+	} else{
+		fmt.Printf("\nUpdate Frame Error ERR: \n Error: %s",  error)
+		return false
+	}
+
+	return true
 
 }
 
