@@ -8,3 +8,13 @@ services:
         ports:
           - 20002:27017
         command: mongod --smallfiles --logpath=/dev/null # --quiet
+    bot:
+        build: .
+        depends_on:
+          - mongodb
+        container_name: "bot"
+        volumes:
+          - ./config/conf:/conf
+        ports:
+          - 1202:1202
+        entrypoint: "./main -c /conf"
